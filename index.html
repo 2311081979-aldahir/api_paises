@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explorador de Países — REST Countries API</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F1ECDD;
+    --paper-raised:#FAF7EE;
+    --ink:#20303F;
+    --ink-soft:#5B6B78;
+    --brass:#A2793B;
+    --brass-dark:#7C5A26;
+    --stamp:#A6423B;
+    --line:#D9CFB5;
+    --err-bg:#F6E4E1;
+    --err-ink:#8A3128;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:2.5rem 1.5rem 4rem;}
+
+  header{
+    border-bottom:2px solid var(--ink);
+    padding-bottom:1.25rem;
+    margin-bottom:1.75rem;
+  }
+  header h1{
+    font-family:'Fraunces',serif;
+    font-weight:900;
+    font-size:2.5rem;
+    margin:0 0 0.15rem;
+    letter-spacing:-0.01em;
+  }
+  header p{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:0.95rem;
+  }
+
+  .config{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:1rem 1.25rem;
+    margin-bottom:1.75rem;
+  }
+  .config-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--brass-dark);
+    display:block;
+    margin-bottom:0.5rem;
+  }
+  .config-row{display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;}
+  .config input[type=text]{
+    flex:1;
+    min-width:220px;
+    padding:0.55rem 0.75rem;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.85rem;
+    background:#fff;
+    color:var(--ink);
+  }
+  .config small{
+    display:block;
+    margin-top:0.5rem;
+    color:var(--ink-soft);
+    font-size:0.78rem;
+    line-height:1.5;
+  }
+  .config small code{
+    background:var(--paper);
+    padding:0.05rem 0.35rem;
+    border-radius:3px;
+  }
+
+  .step{
+    margin-bottom:2rem;
+  }
+  .step-title{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--brass-dark);
+    margin:0 0 0.6rem;
+  }
+
+  .search-box{
+    display:flex;
+    gap:0.6rem;
+    margin-bottom:1rem;
+  }
+  .search-box input{
+    flex:1;
+    padding:0.85rem 1rem;
+    font-size:1.05rem;
+    border:2px solid var(--ink);
+    border-radius:8px;
+    background:var(--paper-raised);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+  }
+  .search-box input:focus{outline:none;border-color:var(--brass);}
+  button{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:0.95rem;
+    padding:0.85rem 1.4rem;
+    border-radius:8px;
+    border:2px solid var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+    cursor:pointer;
+  }
+  button:hover{background:var(--brass-dark);border-color:var(--brass-dark);}
+  button:active{transform:translateY(1px);}
+
+  .regions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.5rem;
+  }
+  .chip{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.78rem;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    padding:0.45rem 0.9rem;
+    border-radius:20px;
+    border:1.5px solid var(--ink);
+    background:transparent;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .chip.active{background:var(--ink);color:var(--paper);}
+  .chip:hover{border-color:var(--brass-dark);}
+
+  #status{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.9rem;
+    padding:0.9rem 1.1rem;
+    border-radius:8px;
+    margin-bottom:1.5rem;
+  }
+  #status.hidden{display:none;}
+  #status.loading{background:var(--paper-raised);border:1px dashed var(--line);color:var(--ink-soft);}
+  #status.error{background:var(--err-bg);color:var(--err-ink);border:1px solid #E0B6AF;}
+
+  #countryPicker{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+    gap:0.6rem;
+  }
+  #countryPicker.hidden{display:none;}
+  .pick-item{
+    display:flex;
+    align-items:center;
+    gap:0.6rem;
+    background:var(--paper-raised);
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    padding:0.55rem 0.75rem;
+    cursor:pointer;
+    text-align:left;
+    font-family:'Inter',sans-serif;
+    font-size:0.85rem;
+    color:var(--ink);
+  }
+  .pick-item:hover{border-color:var(--brass);}
+  .pick-item img{width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#fff;border:1px solid var(--line);}
+
+  #detailPanel.hidden{display:none;}
+  .selected-country{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--paper-raised);
+    border:1.5px solid var(--ink);
+    border-radius:10px;
+    padding:0.9rem 1.2rem;
+    margin-bottom:1.25rem;
+  }
+  .selected-country-left{display:flex;align-items:center;gap:0.8rem;}
+  .selected-country-left img{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--ink);background:#fff;}
+  .selected-country-left h2{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:1.3rem;
+    margin:0;
+  }
+  .selected-country button{
+    padding:0.5rem 0.9rem;
+    font-size:0.8rem;
+  }
+
+  .char-picker{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.5rem;
+    margin-bottom:0.6rem;
+  }
+  .char-check{
+    display:flex;
+    align-items:center;
+    gap:0.4rem;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.76rem;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    padding:0.45rem 0.8rem;
+    border-radius:20px;
+    border:1.5px solid var(--line);
+    background:var(--paper-raised);
+    color:var(--ink-soft);
+    cursor:pointer;
+    user-select:none;
+  }
+  .char-check.checked{
+    border-color:var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+  }
+  .char-check input{display:none;}
+  .char-hint{
+    font-size:0.78rem;
+    color:var(--ink-soft);
+    margin:0 0 1.25rem;
+  }
+
+  .stamp{
+    position:relative;
+    background:var(--paper-raised);
+    border:2.5px dashed var(--brass);
+    border-radius:14px;
+    padding:1.4rem 1.4rem 1.2rem;
+  }
+  .stamp-fields{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:0.9rem 1.2rem;
+  }
+  .field-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.63rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--brass-dark);
+    margin-bottom:0.15rem;
+  }
+  .field-value{
+    font-size:0.92rem;
+    color:var(--ink);
+    line-height:1.35;
+  }
+
+  @media (max-width:600px){
+    .stamp-fields{grid-template-columns:1fr;}
+    .selected-country{flex-direction:column;align-items:flex-start;gap:0.8rem;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Explorador de Países</h1>
+    <p>Elige un país y luego elige qué características ver de él</p>
+  </header>
+
+  <div class="step">
+    <p class="step-title">Paso 1 · Elige un país</p>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Buscar país... (ej. Canada, México, Japón)">
+      <button id="searchBtn" type="button">Buscar</button>
+    </div>
+    <div class="regions">
+      <button class="chip" data-region="Americas" type="button">Américas</button>
+      <button class="chip" data-region="Africa" type="button">África</button>
+      <button class="chip" data-region="Asia" type="button">Asia</button>
+      <button class="chip" data-region="Europe" type="button">Europa</button>
+      <button class="chip" data-region="Oceania" type="button">Oceanía</button>
+    </div>
+  </div>
+
+  <div id="status" class="hidden"></div>
+
+  <div id="countryPicker"></div>
+
+  <div id="detailPanel" class="hidden">
+    <div class="selected-country">
+      <div class="selected-country-left">
+        <img id="selectedFlag" src="" alt="">
+        <h2 id="selectedName"></h2>
+      </div>
+      <button type="button" id="changeCountryBtn">Cambiar país</button>
+    </div>
+
+    <div class="step">
+      <p class="step-title">Paso 2 · Elige qué características ver</p>
+      <div class="char-picker" id="charPicker"></div>
+    </div>
+
+    <div class="stamp">
+      <div class="stamp-fields" id="stampFields"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let API_KEY = "rc_live_b7bf7acedbd14b2a8474a4486caf2550";
+let selectedCountry = null;
+
+const statusEl = document.getElementById('status');
+const countryPickerEl = document.getElementById('countryPicker');
+const detailPanelEl = document.getElementById('detailPanel');
+const charPickerEl = document.getElementById('charPicker');
+const stampFieldsEl = document.getElementById('stampFields');
+const chips = document.querySelectorAll('.chip');
+
+const CHARACTERISTICS = [
+  { id: 'capital',   label: 'Capital',        get: c => (c.capitals && c.capitals[0]?.name) || 'No disponible' },
+  { id: 'population', label: 'Población',      get: c => c.population != null ? Number(c.population).toLocaleString('es-MX') : 'No disponible' },
+  { id: 'area',       label: 'Área',           get: c => c.area?.kilometers != null ? `${Number(c.area.kilometers).toLocaleString('es-MX')} km²` : 'No disponible' },
+  { id: 'region',     label: 'Región',         get: c => [c.region, c.subregion].filter(Boolean).join(' · ') || 'No disponible' },
+  { id: 'currency',   label: 'Moneda',         get: c => (c.currencies || []).map(cur => cur.name).join(', ') || 'No disponible' },
+  { id: 'language',   label: 'Idioma',         get: c => (c.languages || []).map(l => l.name).join(', ') || 'No disponible' },
+  { id: 'borders',    label: 'Fronteras',      get: c => (c.borders || []).join(', ') || 'Sin fronteras terrestres' },
+  { id: 'calling',    label: 'Código telefónico', get: c => (c.calling_codes || []).join(', ') || 'No disponible' },
+  { id: 'code',       label: 'Código ISO',     get: c => c.codes?.alpha_3 || c.codes?.alpha_2 || 'No disponible' },
+];
+const DEFAULT_SELECTED = [];
+let checkedChars = new Set(DEFAULT_SELECTED);
+
+document.getElementById('searchBtn').addEventListener('click', doSearch);
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+chips.forEach(chip => {
+  chip.addEventListener('click', () => {
+    chips.forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    searchByRegion(chip.dataset.region);
+  });
+});
+document.getElementById('changeCountryBtn').addEventListener('click', () => {
+  selectedCountry = null;
+  detailPanelEl.classList.add('hidden');
+  countryPickerEl.classList.remove('hidden');
+});
+
+function showStatus(msg, type){
+  statusEl.className = type;
+  statusEl.textContent = msg;
+}
+function hideStatus(){
+  statusEl.className = 'hidden';
+}
+
+function requireKey(){
+  if (!API_KEY || API_KEY === "PON_AQUI_TU_API_KEY"){
+    showStatus('Falta poner tu API key en la constante API_KEY, al inicio del <script> del archivo.', 'error');
+    return false;
+  }
+  return true;
+}
+
+async function callApi(query){
+  const url = `https://api.restcountries.com/countries/v5?${query}`;
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${API_KEY}` }
+  });
+  if (!response.ok){
+    if (response.status === 401 || response.status === 403){
+      throw new Error('La API rechazó tu clave (401/403). Revisa que la copiaste completa, que no haya sido revocada, o que el hostname esté permitido en CORS.');
+    }
+    if (response.status === 429){
+      throw new Error('Se alcanzó el límite mensual de peticiones (429). El plan gratuito permite 500 al mes.');
+    }
+    throw new Error(`La API respondió con error ${response.status}.`);
+  }
+  return response.json();
+}
+
+async function doSearch(){
+  const term = document.getElementById('searchInput').value.trim();
+  if (!term){
+    showStatus('Escribe el nombre de un país para buscar.', 'error');
+    return;
+  }
+  if (!requireKey()) return;
+  chips.forEach(c => c.classList.remove('active'));
+  showStatus('Consultando la API...', 'loading');
+  countryPickerEl.innerHTML = '';
+  try{
+    const raw = await callApi(`q=${encodeURIComponent(term)}`);
+    renderPicker(extractCountries(raw));
+  }catch(err){
+    showStatus(`Error: ${err.message}`, 'error');
+  }
+}
+
+async function searchByRegion(region){
+  if (!requireKey()) return;
+  showStatus('Consultando la API...', 'loading');
+  countryPickerEl.innerHTML = '';
+  try{
+    const raw = await callApi(`region=${encodeURIComponent(region)}`);
+    renderPicker(extractCountries(raw));
+  }catch(err){
+    showStatus(`Error: ${err.message}`, 'error');
+  }
+}
+
+function extractCountries(raw){
+  const objects = raw?.data?.objects;
+  if (Array.isArray(objects)) return objects;
+  if (raw?.data && typeof raw.data === 'object') return [raw.data];
+  return [];
+}
+
+function renderPicker(countries){
+  if (!countries.length){
+    showStatus('No se encontraron países con ese criterio.', 'error');
+    return;
+  }
+  hideStatus();
+  countryPickerEl.classList.remove('hidden');
+  countryPickerEl.innerHTML = countries.map((c, i) => {
+    const name = c.names?.common || 'Desconocido';
+    const flag = c.flag?.url_png || c.flag?.url_svg || '';
+    return `<button type="button" class="pick-item" data-index="${i}">
+      ${flag ? `<img src="${flag}" alt="">` : ''}
+      <span>${name}</span>
+    </button>`;
+  }).join('');
+
+  countryPickerEl.querySelectorAll('.pick-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedCountry = countries[Number(btn.dataset.index)];
+      openDetail();
+    });
+  });
+}
+
+function openDetail(){
+  countryPickerEl.classList.add('hidden');
+  detailPanelEl.classList.remove('hidden');
+
+  document.getElementById('selectedFlag').src = selectedCountry.flag?.url_png || selectedCountry.flag?.url_svg || '';
+  document.getElementById('selectedName').textContent = selectedCountry.names?.common || 'Desconocido';
+
+  checkedChars = new Set(DEFAULT_SELECTED);
+  renderCharPicker();
+  renderStamp();
+}
+
+function renderCharPicker(){
+  charPickerEl.innerHTML = CHARACTERISTICS.map(ch => `
+    <label class="char-check ${checkedChars.has(ch.id) ? 'checked' : ''}" data-id="${ch.id}">
+      <input type="checkbox" ${checkedChars.has(ch.id) ? 'checked' : ''}>
+      ${ch.label}
+    </label>
+  `).join('');
+
+  charPickerEl.querySelectorAll('.char-check').forEach(label => {
+    label.addEventListener('click', e => {
+      e.preventDefault();
+      const id = label.dataset.id;
+      if (checkedChars.has(id)){
+        checkedChars.delete(id);
+      } else {
+        checkedChars.add(id);
+      }
+      renderCharPicker();
+      renderStamp();
+    });
+  });
+}
+
+function renderStamp(){
+  stampFieldsEl.innerHTML = CHARACTERISTICS
+    .filter(ch => checkedChars.has(ch.id))
+    .map(ch => `
+      <div>
+        <div class="field-label">${ch.label}</div>
+        <div class="field-value">${ch.get(selectedCountry)}</div>
+      </div>
+    `).join('');
+}
+</script>
+</body>
+</html>
